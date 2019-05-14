@@ -1,5 +1,6 @@
 import arg from 'arg'
 import inquirer from 'inquirer'
+import { createPrototype } from './main'
 
 function parseArgumentsIntoOptions(rawArgs){
   const args = arg(
@@ -39,7 +40,7 @@ async function promptForMissingOptions(options) {
       type: 'list',
       name: 'template',
       message: 'Please choose which project template to use',
-      choices: ['JavaScript', "TypeScript", "GOV.UK", "HMCTS"]
+      choices: ['JavaScript', "TypeScript", "GOVUK", "HMCTS"]
     })
   }
 
@@ -64,5 +65,5 @@ async function promptForMissingOptions(options) {
 export async function cli(args){
   let options = parseArgumentsIntoOptions(args)
   options = await promptForMissingOptions(options)
-  console.log(options);
+  await createPrototype(options)
 }
