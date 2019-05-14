@@ -4,6 +4,9 @@ import ncp from 'ncp'
 import path from 'path'
 import { promisify } from 'util'
 import { URL } from 'url'
+import execa from 'execa'
+import Listr from 'listr'
+import { projectInstall } from 'pkg-install'
 
 
 const access = promisify(fs.access)
@@ -13,6 +16,17 @@ async function copyTemplateFiles(options) {
   return copy(options.templateDirectory, options.targetDirectory, {
     clobber: false
   })
+}
+
+async function initGit(options) {
+  const result = await execa('git', ['init'], {
+    cwd: options.targetDirectory
+  })
+
+  if (result.failed) {
+    return Promise.reject(new Error('Failed to initialize Git'))
+  }
+  return
 }
 
 export async function createPrototype(options){
@@ -37,8 +51,29 @@ export async function createPrototype(options){
     process.exit(1)
   }
 
-  console.log('Copy project files')
-  await copyTemplateFiles(options)
+  const tasks = new Listr([
+    {
+      title: 'Copy prototype files',
+      task: () => copyTemplateFiles(options)
+    },
+    {
+      title: 'Initialize Git',
+      task: () => initGit(options),
+      enabled: () => options.git
+    },
+    {
+      title: 'Install dependencies',
+      task: () => projectInstall({
+        cwd: options.targetDirectory
+      }),
+      skip: () =>
+        !options.runInstall
+          ? 'Pass --install to automatically install dependencies'
+          : undefined
+    }
+  ])
+
+  await tasks.run()
 
   console.log('%s Prototype ready', chalk.green.bold('DONE'))
   return true
